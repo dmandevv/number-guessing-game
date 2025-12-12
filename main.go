@@ -9,13 +9,44 @@ import (
 	"strconv"
 	"strings"
 	"text/tabwriter"
+	"time"
 )
 
 var difficultyLevel DifficultyLevel
 var guessesLeft int
+var numberToGuess int
+var hintRangeLow int
+var hintRangeHigh int
+var startTime time.Time
 
 func main() {
 	fmt.Println("Welcome to the Number Guessing Game!")
+
+GameLoop:
+	for {
+		winner := gameLoop()
+		if winner {
+			fmt.Printf("Congratulations! You guessed the correct number in "+YellowText+"%.2f"+NormalText+"s using "+GreenText+"%v"+NormalText+" attempts.\n", gameDuration().Seconds(), int(difficultyLevel)-guessesLeft)
+		} else {
+			fmt.Printf("Sorry! You're out of chances. The number was: %d\n", numberToGuess)
+		}
+		fmt.Printf("Would you like to play again? <" + GreenText + "Yes" + NormalText + " or " + RedText + "No" + NormalText + ">: ")
+		scanner := bufio.NewScanner(os.Stdin)
+		for scanner.Scan() {
+			input := scanner.Text()
+			input = strings.ToLower(input)
+			input = strings.TrimSpace(input)
+			if input == "yes" {
+				continue GameLoop
+			} else if input == "no" {
+				fmt.Println("Thanks for playing!")
+				os.Exit(0)
+			}
+		}
+	}
+}
+
+func gameLoop() bool {
 	fmt.Printf("I'm thinking of a number between %v and %v.\n", NUMBER_RANGE_LOW, NUMBER_RANGE_HIGH)
 	fmt.Println("Please select the difficulty level:")
 
@@ -47,16 +78,24 @@ func main() {
 	}
 
 	fmt.Printf("Great! You have selected %v difficulty.\n", getColouredText(difficultyLevel))
-	fmt.Println("Let's start the game!")
+	fmt.Println("Let's start the game! (Enter 'hint' if you need help :D)")
 
 	guessesLeft = int(difficultyLevel)
-	randNumber := NUMBER_RANGE_LOW + rand.IntN(NUMBER_RANGE_HIGH-NUMBER_RANGE_LOW)
+	numberToGuess = NUMBER_RANGE_LOW + rand.IntN(NUMBER_RANGE_HIGH-NUMBER_RANGE_LOW)
+	hintRangeLow = NUMBER_RANGE_LOW
+	hintRangeHigh = NUMBER_RANGE_HIGH
+	startTime = time.Now()
 	for guessesLeft > 0 {
 		fmt.Printf("Enter your guess (%v left): ", guessesLeft)
 
 		scanner.Scan()
 		guessText := scanner.Text()
 		guessText = strings.TrimSpace(guessText)
+
+		if guessText == "hint" {
+			fmt.Printf("The number is in the range of: "+YellowText+"%v - %v"+NormalText+"\n", hintRangeLow, hintRangeHigh)
+			continue
+		}
 
 		guessNumber, err := strconv.Atoi(guessText)
 		if err != nil {
@@ -69,17 +108,21 @@ func main() {
 		}
 
 		guessesLeft -= 1
-		if guessNumber == randNumber {
-			fmt.Printf("Congratulations! You guessed the correct number in %d attempts.\n", int(difficultyLevel)-guessesLeft)
-			os.Exit(0)
-		} else if guessNumber < randNumber {
+		if guessNumber == numberToGuess {
+			return true
+		} else if guessNumber < numberToGuess {
 			fmt.Printf("Incorrect! The number is greater than %d\n", guessNumber)
-		} else if guessNumber > randNumber {
+			if guessNumber >= hintRangeLow {
+				hintRangeLow = guessNumber + 1
+			}
+		} else if guessNumber > numberToGuess {
 			fmt.Printf("Incorrect! The number is less than %d\n", guessNumber)
+			if guessNumber <= hintRangeHigh {
+				hintRangeHigh = guessNumber - 1
+			}
 		}
 	}
-
-	fmt.Printf("Sorry! You're out of chances. The number was: %d\n", randNumber)
+	return false
 }
 
 const (
@@ -100,4 +143,8 @@ func getColouredText(dl DifficultyLevel) string {
 	default:
 		return dl.String()
 	}
+}
+
+func gameDuration() time.Duration {
+	return time.Since(startTime)
 }

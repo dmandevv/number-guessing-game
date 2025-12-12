@@ -3,12 +3,12 @@ package main
 import "fmt"
 
 var NUMBER_RANGE_LOW int = 1
-var NUMBER_RANGE_HIGH int = 100
+var NUMBER_RANGE_HIGH int = 25
 
 type DifficultyLevel int
 
 const (
-	EASY   = 10
+	EASY   = 8
 	MEDIUM = 5
 	HARD   = 3
 )
